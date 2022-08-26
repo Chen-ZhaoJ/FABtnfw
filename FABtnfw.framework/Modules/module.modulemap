@@ -1,0 +1,11 @@
+framework module FABtnfw {
+  umbrella header "FABtnfw.h"
+
+  export *
+  module * { export * }
+}
+
+module FABtnfw.Swift {
+    header "FABtnfw-Swift.h"
+    requires objc
+}
