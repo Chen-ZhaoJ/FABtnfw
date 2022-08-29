@@ -12,6 +12,7 @@
 			buildConfigurationList = DCCCC9F828B76035000D773C /* Build configuration list for PBXAggregateTarget "FABtn" */;
 			buildPhases = (
 				DCCCC9FB28B76039000D773C /* ShellScript */,
+				DCCE264328BCA27200D311EC /* ShellScript */,
 			);
 			dependencies = (
 			);
@@ -165,6 +166,23 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "# Merge Script\n\n# 1\n# Set bash script to exit immediately if any commands fail.\nset -e\n\n# 2\n# Setup some constants for use later on.\nFRAMEWORK_NAME=\"FABtnfw\" \n\n# 3\n# If remnants from a previous build exist, delete them.\nif [ -d \"${SRCROOT}/build\" ]; then\nrm -rf \"${SRCROOT}/build\"\nfi\n\n# 4\n# Build the framework for device and for simulator (using\n# all needed architectures).\nxcodebuild -target \"${FRAMEWORK_NAME}\" -configuration Release -arch arm64 only_active_arch=no defines_module=yes -sdk \"iphoneos\"\nxcodebuild -target \"${FRAMEWORK_NAME}\" -configuration Release -arch x86_64 only_active_arch=no defines_module=yes -sdk \"iphonesimulator\"\n\n# 5\n# Remove .framework file if exists on Desktop from previous run.\nif [ -d \"${HOME}/Desktop/${FRAMEWORK_NAME}.framework\" ]; then\nrm -rf \"${HOME}/Desktop/${FRAMEWORK_NAME}.framework\"\nfi\n\n# 6\n# Copy the device version of framework to Desktop.\ncp -r \"${SRCROOT}/build/Release-iphoneos/${FRAMEWORK_NAME}.framework\" \"${HOME}/Desktop/${FRAMEWORK_NAME}.framework\"\n\n# 7\n# Replace the framework executable within the framework with\n# a new version created by merging the device and simulator\n# frameworks' executables with lipo.\nlipo -create -output \"${HOME}/Desktop/${FRAMEWORK_NAME}.framework/${FRAMEWORK_NAME}\" \"${SRCROOT}/build/Release-iphoneos/${FRAMEWORK_NAME}.framework/${FRAMEWORK_NAME}\" \"${SRCROOT}/build/Release-iphonesimulator/${FRAMEWORK_NAME}.framework/${FRAMEWORK_NAME}\"\n\n# 8\n# Copy the Swift module mappings for the simulator into the\n# framework.  The device mappings already exist from step 6.\ncp -r \"${SRCROOT}/build/Release-iphonesimulator/${FRAMEWORK_NAME}.framework/Modules/${FRAMEWORK_NAME}.swiftmodule/\" \"${HOME}/Desktop/${FRAMEWORK_NAME}.framework/Modules/${FRAMEWORK_NAME}.swiftmodule\"\n\n# 9\n# Delete the most recent build.\nif [ -d \"${SRCROOT}/build\" ]; then\nrm -rf \"${SRCROOT}/build\"\nfi\n";
+		};
+		DCCE264328BCA27200D311EC /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n#!/bin/sh -e\n\nREVEAL_XCFRAMEWORK_IN_FINDER=true\n\nFREAMEWORK_NAME=\"${PROJECT_NAME}\"\nFREAMEWORK_OUTPUT_DIR=\"${PROJECT_DIR}/Distribution\"\nARCHIVE_PATH_IOS_DEVICE=\"./Build/ios_device.xcarchive\"\nARCHIVE_PATH_IOS_SIMULATOR=\"./Build/ios_simulator.xcarchive\"\n# ARCHIVE_PATH_MACOS=\"./build/macos.xcarchive\"\n\nfunction archiveOnePlatform {\n    echo \"▸ Starts archiving the scheme: ${1} for destination: ${2};\\n▸ Archive path: ${3}\"\n\n    xcodebuild archive \\\n        -scheme \"${1}\" \\\n        -destination \"${2}\" \\\n        -archivePath \"${3}\" \\\n        VALID_ARCHS=\"${4}\" \\\n        SKIP_INSTALL=NO \\\n        BUILD_LIBRARY_FOR_DISTRIBUTION=YES | xcpretty\n\n    # sudo gem install -n /usr/local/bin xcpretty\n    # xcpretty makes xcode compile information much more readable.\n}\n\nfunction archiveAllPlatforms {\n\n    # https://www.mokacoding.com/blog/xcodebuild-destination-options/\n\n    # Platform                Destination\n    # iOS                    generic/platform=iOS\n    # iOS Simulator            generic/platform=iOS Simulator\n    # iPadOS                generic/platform=iPadOS\n    # iPadOS Simulator        generic/platform=iPadOS Simulator\n    # macOS                    generic/platform=macOS\n    # tvOS                    generic/platform=tvOS\n    # watchOS                generic/platform=watchOS\n    # watchOS Simulator        generic/platform=watchOS Simulator\n    # carPlayOS                generic/platform=carPlayOS\n    # carPlayOS Simulator    generic/platform=carPlayOS Simulator\n\n    SCHEME=${1}\n\n    archiveOnePlatform $SCHEME \"generic/platform=iOS Simulator\" ${ARCHIVE_PATH_IOS_SIMULATOR} \"x86_64\"\n      archiveOnePlatform $SCHEME \"generic/platform=iOS\" ${ARCHIVE_PATH_IOS_DEVICE} \"armv7 arm64\"\n      # archiveOnePlatform $SCHEME \"generic/platform=macOS\" ${ARCHIVE_PATH_MACOS}\n}\n\nfunction makeXCFramework {\n\n    FRAMEWORK_RELATIVE_PATH=\"Products/Library/Frameworks\"\n    OUTPUT_DIR=\"${FREAMEWORK_OUTPUT_DIR}/DynamicFramework\"\n\n    mkdir -p \"${OUTPUT_DIR}\"\n\n    xcodebuild -create-xcframework \\\n        -framework \"${ARCHIVE_PATH_IOS_DEVICE}/${FRAMEWORK_RELATIVE_PATH}/${FREAMEWORK_NAME}.framework\" \\\n        -framework \"${ARCHIVE_PATH_IOS_SIMULATOR}/${FRAMEWORK_RELATIVE_PATH}/${FREAMEWORK_NAME}.framework\" \\\n        -output \"${OUTPUT_DIR}/${FREAMEWORK_NAME}.xcframework\"\n}\n\necho \"#####################\"\necho \"▸ Cleaning XCFramework output dir: ${FREAMEWORK_OUTPUT_DIR}\"\nrm -rf $FREAMEWORK_OUTPUT_DIR\n\n#### Make XCFramework\n\necho \"▸ Archive framework: ${FREAMEWORK_NAME}\"\narchiveAllPlatforms $FREAMEWORK_NAME\n\necho \"▸ Make framework: ${FREAMEWORK_NAME}.xcframework\"\nmakeXCFramework\n\n# Clean Build\nrm -rf \"./Build\"\n\nif [ ${REVEAL_XCFRAMEWORK_IN_FINDER} = true ]; then\n    open \"${FREAMEWORK_OUTPUT_DIR}/\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
